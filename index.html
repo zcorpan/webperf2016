@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Images, performance, and the &lt;picture> element by Simon Pieters at Stockholm Web Performance Group 2016-10-03</title>
+    <style>
+      body { line-height:1.5; font-family:sans-serif; font-weight:lighter }
+      h1, h2 { font-weight:normal; line-height:1; background-color:#0095CB; padding:0.2em; position:relative; z-index:1; border-bottom:8px #faa51a solid; margin:0.5em 0 }
+      h1 + p { font-size:2em }
+      .remark-slide-content { background-color:#1D3F58; color:white; text-align:center; vertical-align:middle; padding:0 }
+      .light { background-color:white; color:black }
+      .light.gray { background-color:#e6e6e6 }
+      .light h2 { background-color:#1D3F58; color:white }
+      pre, ul, ol { display:table; margin:1em auto; text-align:left }
+      .light .remark-code { box-shadow:0 0.5em 2em gray }
+      .remark-code { font-size:1.5em }
+      .remark-slide-content a { color:inherit; text-decoration:none }
+      ul { font-size:1.4em }
+
+      svg, img { height:150px; margin-left:.5em; margin-right:.5em }
+      .w3c { padding: .65em .7em .6em; border-radius: .4em; background:#1a5e9a; box-sizing:border-box }
+      .big { height:400px }
+      .full { height:auto; width:100%; margin:0; display:block }
+      .half { height:auto; width:50%; margin:0 }
+
+      .small-text { font-size:0.5em; columns: 2 }
+      .small-text > * { margin:0 }
+
+      details { position:relative }
+      details > div { font-size:7em; position:absolute; top:45%; left:22% }
+
+      #filter { display:block; transform:scale(2) }
+      #blend { display:block; transform:scale(3); color:#faa51a; letter-spacing:-.2em; word-spacing:.4em; font-weight:bolder }
+      input[type=range] { width:50%; margin-top:1em; zoom:2 /* forgive me */; vertical-align:-0.4em }
+      button { font-size:2em }
+
+      table { table-layout:fixed; width:100%; border:hidden; border-collapse:collapse }
+      th { vertical-align:bottom }
+      td { height:3em; border:solid black }
+      tr + tr > th { text-align:right; vertical-align:middle; padding-right:0.5em }
+
+      .no { background-color:#900; color:white }
+      .yes { background-color:#3f3 }
+    </style>
+  </head>
+  <body>
+    <noscript id="source">
+
+<svg id="opera-logo" viewBox="0 0 295 120"><title>Opera</title><defs><linearGradient id="gradiant1" spreadMethod="pad" gradientTransform="matrix(0,97.396584,-97.396584,0,52.004814,11.389526)" gradientUnits="userSpaceOnUse" y2="0" x2="1" y1="0" x1="0"><stop offset="0" style="stop-color:#ff1b2d;stop-opacity:1"/><stop offset="0.3" style="stop-color:#ff1b2d;stop-opacity:1"/><stop offset="0.61" style="stop-color:#ff1b2d;stop-opacity:1"/><stop offset="1" style="stop-color:#a70014;stop-opacity:1"/></linearGradient><linearGradient id="gradiant2" spreadMethod="pad" gradientTransform="matrix(0,86.142511,-86.142511,0,77.23835,17.13012)" gradientUnits="userSpaceOnUse" y2="0" x2="1" y1="0" x1="0"><stop offset="0" style="stop-color:#9c0000;stop-opacity:1"/><stop offset="0.7" style="stop-color:#ff4b4b;stop-opacity:1"/><stop offset="1" style="stop-color:#ff4b4b;stop-opacity:1"/></linearGradient></defs><path d="M60.38 9.75C32.63 9.75 10.14 32.25 10.14 60l0 0c0 26.95 21.22 48.94 47.86 50.19l0 0c0.8 0.04 1.59 0.06 2.39 0.06l0 0c12.87 0 24.6-4.84 33.49-12.79l0 0c-5.89 3.91-12.78 6.15-20.14 6.15l0 0c-11.97 0-22.68-5.94-29.89-15.3l0 0C38.29 81.76 34.69 72.06 34.45 61.18l0 0c0-0.03 0-2.34 0-2.37l0 0C34.69 47.94 38.29 38.24 43.84 31.68l0 0C51.05 22.32 61.77 16.39 73.74 16.39l0 0c7.36 0 14.25 2.25 20.14 6.16l0 0C85.03 14.63 73.37 9.8 60.57 9.75l0 0c-0.06 0-0.13 0-0.19 0z" fill="url(#gradiant1)"/><path d="M43.84 31.68C48.46 26.24 54.41 22.96 60.92 22.96l0 0c14.63 0 26.49 16.59 26.49 37.04l0 0c0 20.46-11.86 37.04-26.49 37.04l0 0c-6.51 0-12.46-3.28-17.07-8.72l0 0c7.21 9.36 17.92 15.3 29.89 15.3l0 0c7.36 0 14.25-2.25 20.14-6.15l0 0C104.16 88.26 110.63 74.89 110.63 60l0 0c0-14.88-6.47-28.26-16.76-37.46l0 0C87.98 18.63 81.1 16.39 73.74 16.39l0 0c-11.97 0-22.68 5.94-29.89 15.3" fill="url(#gradiant2)"/><path d="m148.99 40.16c-11.84 0-21.47 10.1-21.47 22.51 0 12.41 9.63 22.51 21.47 22.51 11.84 0 21.47-10.1 21.47-22.51 0-12.41-9.63-22.51-21.47-22.51zm0 3.38c9.98 0 18.09 8.58 18.09 19.13 0 10.55-8.11 19.13-18.09 19.13-9.97 0-18.09-8.58-18.09-19.13 0-10.55 8.11-19.13 18.09-19.13zm39.46 8.51c-4.45 0-8.28 2.1-10.88 5.42l0-4.68-3.54 0 0 40.72 3.54 0 0-14.6c2.6 3.32 6.43 5.42 10.88 5.42 8.27 0 14.99-7.24 14.99-16.14 0-8.9-6.73-16.14-14.99-16.14zm81.99 0c-8.27 0-14.99 7.24-14.99 16.14 0 8.9 6.73 16.14 14.99 16.14 4.45 0 8.28-2.1 10.88-5.42l0 4.58 3.54 0 0-30.7-3.54 0 0 4.68c-2.59-3.32-6.43-5.42-10.88-5.42zm-48.83 0.05c-8.27 0-14.99 7.24-14.99 16.14 0 8.9 6.73 16.13 14.99 16.13 5.91 0 11.04-3.7 13.48-9.07l-3.05-1.78c-1.82 4.33-5.81 7.34-10.42 7.34-5.99 0-10.92-5.06-11.44-11.5l24.27 0 2.13 0c0.03-0.37 0.04-0.75 0.04-1.13 0-9.5-6.17-16.14-14.99-16.14zm31.4 0.08c-1.22 0.05-2.37 0.37-3.45 0.95-2.27 1.21-3.84 3.05-4.84 5.4-0.02 0.06-0.05 0.11-0.07 0.16-0.01 0-0.02 0-0.04 0l0-5.64 0 0 0-0.06-3.54 0 0 0.06 0 30.45 3.54 0 0 0 0-0.21c0-5.49 0-10.32 0-15.8 0-2.25 0.35-4.08 1.09-5.86 0.68-1.65 1.64-3.12 3-4.29 1.61-1.38 3.45-1.97 5.56-1.63 0.34 0.06 0.68 0.13 1.04 0.2 0.2-1.01 0.68-2.3 0.89-3.32-0.98-0.28-2.27-0.44-3.19-0.4zm-64.57 3.38c6.34 0 11.49 5.67 11.49 12.63 0 6.97-5.16 12.63-11.49 12.63-6.34 0-11.49-5.67-11.49-12.63 0-6.97 5.16-12.63 11.49-12.63zm81.99 0c6.34 0 11.49 5.67 11.49 12.63 0 6.97-5.16 12.63-11.49 12.63-6.34 0-11.49-5.67-11.49-12.63 0-6.97 5.16-12.63 11.49-12.63zm-48.83 0.05c6.26 0 10.64 4.22 11.37 10.68l-22.71 0c0.86-6.04 5.61-10.68 11.34-10.68z" style="fill-rule:nonzero;fill:#fff"/></svg>
+
+# Images, performance, and the `<picture>` element
+
+Simon Pieters @zcorpan
+
+---
+
+## About me
+
+* Opera, 2007
+* Office in Linköping
+* Live in Örebro
+
+???
+
+I worked mainly on quality assurance for the Presto engine,
+until 2013 when we switched to Chromium.
+
+Now I work full time on web standards, but also contribute to web-platform-tests,
+a set of testsuites that are shared across all major browser vendors.
+
+---
+class: light
+
+![](https://resources.whatwg.org/logo.svg)
+![](https://helloanselm.com/img/work/ricg-icon--red.svg)
+<img src="https://www.w3.org/StyleSheets/TR/2016/logos/W3C" alt="" class="w3c">
+
+## Editor of web standards
+
+* WHATWG: HTML, Quirks mode
+* RICG: The `picture` element (now WHATWG)
+* W3C: CSSOM, CSSOM View, Geometry APIs, WebVTT
+
+???
+
+I co-edit the HTML standard at the WHATWG.
+
+I helped drive the `picture` element spec. It's now part of the HTML standard.
+
+At the W3C I edit the CSS object model specs.
+
+---
+class:light
+
+## Images & performance
+
+<details>
+ <summary><img src="bytes-chart.png" alt="" class="full"></summary>
+ <div>😭</div>
+</details>
+
+Source: httparchive.org
+
+???
+
+The performance aspect I want to talk about today is the amount of bytes that go over the wire.
+
+This data is publicly available, called HTTPArchive.
+
+A crawler fetches 500,000 top pages using Chrome and collects various data, can then be queried
+with BigQuery.
+
+2/3 of the bytes of the average Web page is image data.
+
+The HTML and CSS are thin slices.
+
+**CLICK**
+
+What can we do to reduce bytes from images?
+
+---
+
+## Use CSS instead of images
+
+ * border-radius
+ * text-shadow
+ * box-shadow
+ * gradients
+ * blend modes
+ * filter, backdrop-filter
+
+???
+
+In some cases images are used, but the desired effect can be achieved with CSS.
+
+For example buttons with rounded corners and a gradient.
+
+Blend modes, may be familiar to those in Photoshop...
+
+---
+class: light
+
+## <span id="filter">Filter &</span> <span id="blend">Blend mode</span>
+
+<label>filter: blur(<input type="range" oninput="document.body.style.filter = 'blur(' + this.value + 'px)';" value="0" max="10" step="any">px)</label>
+<button onclick="document.getElementById('blend').style.mixBlendMode = 'normal';">normal</button>
+<button onclick="document.getElementById('blend').style.mixBlendMode = 'multiply';">multiply</button>
+<button onclick="document.getElementById('blend').style.mixBlendMode = 'screen';">screen</button>
+<button onclick="document.getElementById('blend').style.mixBlendMode = 'overlay';">overlay</button>
+<button onclick="document.getElementById('blend').style.mixBlendMode = 'difference';">difference</button>
+
+???
+
+Just to demonstrate filters and blend modes.
+
+There are more filters than blur; brightness, contrast, drop-shadow, grayscale, etc.
+
+Also more blend modes; lighten, darken, saturation, luminosity, etc.
+
+These are particularly useful to use on images, e.g. for hover effects, or text on images.
+
+---
+
+## Use SVG
+
+ * Generally less bytes
+ * Is scalable
+ * Can be accessible
+ * Can be animated
+ * Can be scripted
+ * Can use media queries
+ * Inline, `<img>`, background-image...
+
+???
+
+For some kinds of images it makes sense to use SVG. Icons, logos...
+
+Interactive things like an image map can also be done with SVG, with embedded links.
+
+SVG can use media queries in CSS, to make the image adapt to different viewport sizes.
+
+An icon might benefit from less detail at very small sizes.
+
+SVG can be used wherever an image can be used, or inline in the HTML.
+
+---
+
+## Provide different images
+
+ * pixel density
+ * screen size
+ * page layout
+ * format support
+
+???
+
+So now we're left with images that we can't "convert" to to CSS or SVG. Like photographs.
+
+It's possible to save bytes by providing alternative images, depending on...
+
+Let's take a closer look at each of these in turn.
+
+---
+class:light
+
+## High resolution screens
+
+<svg class=big font-size=5 role=img viewBox="0 0 56 27" font-family=sans-serif aria-label="One phone has big pixels, the other has small pixels.">
+ <defs>
+  <pattern id=img-intro-pixel width=3 patternUnits=userSpaceOnUse stroke-linecap=round x=0 y=0 height=3>
+   <rect fill=black width=3 x=0 height=3 y=0></rect>
+   <line y2=2.5 stroke=red x1=0.5 x2=0.5 y1=0.5></line>
+   <line y2=2.5 stroke=lime x1=1.5 x2=1.5 y1=0.5></line>
+   <line y2=2.5 stroke=blue x1=2.5 x2=2.5 y1=0.5></line>
+  </pattern>
+ </defs>
+
+ <rect width=6 fill=white stroke=black x=6 height=12 y=8 rx=1></rect>
+ <rect width=6 fill=white stroke=black x=36 height=12 y=8 rx=1></rect>
+
+ <line y2=24 stroke-width=3 stroke=brown x1=15 y1=16 x2=22></line>
+ <circle cx=10 cy=10 fill=url(#img-intro-pixel) stroke=black r=8></circle>
+ <line y2=24 stroke-width=3 stroke=brown x1=45 y1=16 x2=52></line>
+ <circle cx=120 transform=scale(0.333333) cy=30 r=24 stroke-width=3 fill=url(#img-intro-pixel) stroke=black></circle>
+
+ <text x=20 y=10 dominant-baseline=middle>1x</text>
+ <text x=50 y=10 dominant-baseline=middle>3x</text>
+</svg>
+
+Illustration from WHATWG HTML spec
+
+???
+
+A few years ago, mobile devices and computer screens started to have more pixels per inch, or higher DPI.
+
+So suddenly, all images started to look bad compared to text. Especially images of text.
+
+Solution is to use bigger images and scale them down to 50%.
+
+But the problem is that it increases the byte size of the images by about 4x if quality is the same.
+
+---
+class: light
+
+## File size & compression ratio
+
+<img src="original.jpg" alt="" class="full">
+
+Source: flif.info
+
+???
+
+Let's do a case study of this sample image, taken from flif.info.
+
+The original image is in PNG and doesn't have lossy artifacts.
+
+---
+class: light
+
+## File size & compression ratio
+
+<details>
+ <summary>
+  <table>
+   <tr><th>Image<th>Dimensions<th>Quality<th>File size
+   <tr><td>original.png<td>1306x870<td><td>1.7 MB
+   <tr><td>half-size.png<td>653x435<td><td>466 KB
+   <tr><td>half-size.jpg<td>653x435<td>Medium<td class=yes>51 KB
+   <tr><td>original.jpg<td>1306x870<td>Medium<td class=no>158 KB
+  </table>
+ </summary>
+ <div style="left:65%; top:57%">😭</div>
+</details>
+
+Tool used: https://imageoptim.com/mozjpeg
+
+???
+
+The original PNG is pretty big, 1.7 MB.
+
+I scaled it down to 50% with GIMP and used "Save for Web" as PNG.
+
+I then used an online tool, imageoptim.com, to convert those to JPEG.
+
+The half size one is 51 KB, and the original size one is 158 KB, about 3 times as big.
+
+**CLICK**
+
+We can't have that.
+
+---
+
+<details>
+ <summary><img src="mozjpeg.png" alt="JPEG compressor; High DPI mode" class="full"></summary>
+ <div style="left:4%; top:46%">👉</div>
+</details>
+
+???
+
+Looking again at this online tool, it has a checkbox for High DPI mode.
+
+It tweaks the quality knobs down a bit, knowing that the image is going to be scaled down.
+
+We can also choose "low" quality for the original size image, and see what happens.
+
+---
+class: light
+
+## File size & compression ratio
+
+<details>
+ <summary>
+  <table>
+   <tr><th>Image<th>Dimensions<th>Quality<th>File size
+   <tr><td>original.png<td>1306x870<td><td>1.7 MB
+   <tr><td>half-size.png<td>653x435<td><td>466 KB
+   <tr><td>half-size.jpg<td>653x435<td>Medium<td class=yes>51 KB
+   <tr><td>original.jpg<td>1306x870<td>Medium<td class=no>158 KB
+   <tr><td>original@2x.jpg<td>1306x870<td>Low &amp; High DPI mode<td class=yes>76 KB
+  </table>
+ </summary>
+ <div style="left:65%; top:62%">😌</div>
+</details>
+
+Tool used: https://imageoptim.com/mozjpeg
+
+???
+
+Now it's 76 KB!
+
+**CLICK**
+
+Much better. Almost the same byte size as the one that's half pixel size.
+
+But wait, if it's lower quality, won't it look horrible?
+
+---
+class: light
+
+## Artifacts are scaled down, too
+
+<img srcset="original.jpg 2x" alt="" class="half"><img srcset="original@2x.jpg 2x" alt="" class="half">
+
+???
+
+It turns out that it doesn't.
+
+This is because the artifacts are also scaled down, so they're not as noticeable.
+
+The one on the left is the medium-quality original-size JPEG.
+
+The one on the right is the low-quality, High DPI mode, original-size JPEG.
+
+---
+
+## srcset x
+
+```html
+<img src="half-size.jpg"
+     srcset="original@2x.jpg 2x"
+     width="653" height="435" alt="...">
+```
+
+???
+
+So we have two images we want to provide.
+
+The half size medium quality JPEG for low-resolution screens.
+
+The original size low quality JPEG for high-resolution screens.
+
+In the HTML we use the smaller image in the src attribute.
+
+And the bigger image in a new attribute called srcset. After the URL is a "2x" descriptor.
+
+The browser then decides which of these to download, based on the user's screen pixel density and preferences.
+
+---
+class: light
+
+## Flexible images
+
+<svg viewBox="0 0 52 25.6" height="160" aria-label="The upright-held phone shows a
+small wolf at the top, and the tablet shows the same image but it is bigger." role="img" class="full">
+
+ <rect width="6" fill="white" stroke="black" x="6" height="12" y="8" rx="1"></rect>
+ <rect fill="#716966" x="7" width="4" height="2" y="9"></rect>
+ <image xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="wolf.jpg" width="4" x="7" y="9" height="2"></image>
+
+ <rect width="20" fill="white" stroke="black" x="25" height="14" y="6" rx="1"></rect>
+ <line y2="6" stroke-width="1.1" stroke="black" x1="26" y1="20" x2="26"></line>
+ <rect fill="#716966" x="27" width="17" height="8.5" y="7"></rect>
+ <image xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="wolf.jpg" width="17" x="27" y="7" height="8.5"></image>
+
+</svg>
+
+Illustration from WHATWG HTML
+
+???
+
+Next up is flexible images.
+
+Sometimes you may want an image to always fill the entire viewport width.
+
+Providing just one big image is going to be a waste of bytes for users with small screens or screens with low DPI.
+
+---
+class: light
+
+## Which image is suitable?
+
+<table>
+ <tr><th><th>Small viewport<th>Big viewport
+ <tr><th>Low DPI<td>small image<td>big image
+ <tr><th>High DPI<td>big image<td>crazy big image
+</table>
+
+???
+
+So how do we determine how big an image should be downloaded?
+
+There are two axes -- viewport size and screen DPI.
+
+---
+
+## Let the browser do the math
+
+* Browser knows the screen's DPI
+* Browser knows the viewport size
+
+???
+
+Instead of trying to write media queries to figure this out as a web developer, it's better to leave it to the browser.
+
+The browser knows the screen DPI and the viewport size.
+
+It just needs to know the images' widths and the intended layout width of the image.
+---
+class: light gray
+
+<img src="rainbow.png" alt="srcset &amp; sizes" class="full">
+
+Source: https://ericportis.com/posts/2014/srcset-sizes/
+
+???
+
+You provide this information with the srcset and sizes attributes.
+
+This image comes from a tutorial from Eric Portis, well worth reading!
+
+---
+
+## srcset w &amp; sizes
+
+```html
+<img src="small.jpg"
+     srcset="small.jpg 320w,
+             medium.jpg 640w,
+             large.jpg 1024w"
+     sizes="100vw"
+     alt="...">
+```
+
+???
+
+Let's break this down.
+
+In src we provide the fallback image.
+
+---
+class:light
+
+## srcset: w descriptor
+
+* Pixel width of the image data
+
+<table>
+ <tr><th>Image<th>Dimensions<th>srcset descriptor
+ <tr><td>small.jpg<td>320x160<td>320w
+ <tr><td>medium.jpg<td>640x320<td>640w
+ <tr><td>large.jpg<td>1024x512<td>1024w
+</table>
+
+???
+
+In srcset we provide different URLs, and a w descriptor, giving the image pixel width.
+
+---
+
+## sizes: vw CSS unit
+
+* Percentage of the viewport width
+
+```css
+#banner img { width:100% }
+```
+
+```html
+<img ... sizes="100vw">
+```
+
+???
+
+In sizes we provide the image's intended layout size.
+
+In this case we want it to fill the viewport, so 100vw. vw is percentage of viewport width.
+
+Why is this necessary? The browser wants to start loading an image before it has downloaded the CSS.
+
+So it doesn't know the layout yet. With the sizes attribute you give the browser a hint about the layout.
+
+So it can calculate the effective pixel density and choose a URL from srcset.
+
+---
+
+## Flexible images with maximum width
+
+```css
+#banner img { width:1024px; max-width:100% }
+```
+
+```html
+<img src="small.jpg"
+     srcset="small.jpg 320w,
+             medium.jpg 640w,
+             large.jpg 1024w"
+     sizes="(min-width: 640px) 640px, 100vw"
+     alt="...">
+```
+
+???
+
+A common case is to want an image to shrink to fit the viewport, but then don't grow bigger than a certain size.
+
+This is effectively a layout breakpoint.
+
+We can describe several layout widths in the sizes attribute: first a media condition, then a CSS length.
+
+Finally a default CSS length.
+
+If the viewport is bigger than 640px, the image should be 640px wide.
+
+Otherwise it should be 100% of the viewport width.
+
+---
+class:light
+
+## Flexible images &amp; layout breakpoints
+
+<svg font-size=6 role=img viewBox="0 0 115 32" font-family=sans-serif class=full aria-label="The
+rotated phone shows a top part of an image of a kettlebell swing; the upright-held tablet shows a
+bit smaller images in two columns; the laptop shows images in three columns.">
+
+ <rect width=12 fill=white stroke=black x=6 height=6 y=24 rx=1></rect>
+ <rect fill=#987b5a width=10 x=7 height=4.5 y=25></rect>
+ <image xlink:href="kettlebell.jpg" preserveAspectRatio="xMinYMin slice" width=10 x=7 y=25 height=4.5></image>
+ <text text-anchor=middle x=12 y=21>1 column</text>
+
+ <rect width=14 fill=white stroke=black x=32 height=20 y=10 rx=1></rect>
+ <line y2=29 stroke-width=1.1 stroke=black x1=32 y1=29 x2=46></line>
+ <rect fill=#987b5a width=5.5 x=33 height=5.5 y=11></rect>
+ <image xlink:href="kettlebell.jpg" width=5.5 x=33 y=11 height=5.5></image>
+ <rect fill=burlywood width=5.5 x=39.5 height=5.5 y=11></rect>
+ <rect fill=silver width=5.5 x=33 height=5.5 y=17.5></rect>
+ <text text-anchor=middle x=39 y=7>2 columns</text>
+
+ <rect width=40 stroke-width=2 fill=white stroke=black x=65 height=26 y=2 rx=2></rect>
+ <line y2=30 stroke-linecap=round stroke-width=2 stroke=black x1=61 y1=30 x2=109></line>
+ <rect fill=#987b5a width=10 x=67 height=10 y=4></rect>
+ <image xlink:href="kettlebell.jpg" width=10 x=67 y=4 height=10></image>
+ <rect fill=burlywood width=10 x=80 height=10 y=4></rect>
+ <rect fill=silver width=10 x=93 height=10 y=4></rect>
+ <text text-anchor=middle x=85 y=25>3 columns</text>
+</svg>
+
+Illustration from WHATWG HTML spec
+
+???
+
+Let's look at a more complicated example. This has 3 different layouts.
+
+1 column for narrow viewports. 2 columns for medium viewports. 3 columns with some margin for wide viewports.
+
+Note that the image is the smallest on the medium viewport. So it's not bigger viewport = bigger image.
+
+Between these layout breakpoints the images are flexible.
+---
+
+## Breakpoints in sizes
+
+```html
+<img sizes="(max-width: 30em) 100vw,
+            (max-width: 50em) 50vw,
+            calc(33vw - 100px)"
+     srcset="swing-200.jpg 200w,
+             swing-400.jpg 400w,
+             swing-800.jpg 800w,
+             swing-1600.jpg 1600w"
+     src="swing-400.jpg" alt="Kettlebell Swing">
+```
+???
+If the viewport is smaller than 30em, let the image fill the viewport. 1 column.
+
+Otherwise, if the viewport is smaller than 50em, let the image take up half the viewport. 2 columns.
+
+Otherwise, let it take up a third of the viewport minus 100px (for margin). 3 columns.
+
+srcset is the same as before; URL and w descriptor.
+
+The browser evaluates the sizes attribute and gets a single layout width,
+then divides each w descriptor with the layout size, to get an effective "x" descriptor.
+
+Then the browser picks a URL in srcset to download based on the user's screen pixel density and preferences.
+---
+class:light
+## Art direction
+<svg viewBox="0 0 52 25.6" class=full style="margin:-50px 0" aria-label="The upright-held phone shows a
+cropped image of a wolf; the rotated tablet shows the uncropped image." role=img>
+
+ <rect width=6 fill=white stroke=black x=6 height=12 y=8 rx=1></rect>
+ <rect fill=#716966 x=7 width=4 height=6 y=9></rect>
+ <image xlink:href="wolf.jpg" preserveAspectRatio="xMidYMid slice" width=4 x=7 y=9 height=6></image>
+
+ <rect width=20 fill=white stroke=black x=25 height=14 y=6 rx=1></rect>
+ <line y2=6 stroke-width=1.1 stroke=black x1=26 y1=20 x2=26></line>
+ <rect fill=#716966 x=27 width=17 height=8.5 y=7></rect>
+ <image xlink:href="wolf.jpg" width=17 x=27 y=7 height=8.5></image>
+
+</svg>
+
+Illustration from WHATWG HTML spec
+???
+So far we've only looked at images that just scale up or down.
+
+Sometimes you may want a completely different image in different layouts, or just crop the image.
+
+It's not necessary to download the full image if you are just going to display a crop.
+---
+## picture &amp; source media
+```html
+<picture>
+ <source media="(min-width: 45em)"
+         srcset="full-image.jpg">
+ <img src="cropped-image.jpg"
+      alt="The wolf runs through the snow.">
+</picture>
+```
+???
+To do this we need to bring in the picture element and the source element.
+
+When picture is used, the browser goes over the list of source elements preceding the img element,
+and the img element itself, to find a candidate element.
+
+The media attribute takes a media query, like in CSS. If it evaluates to false, the source element is skipped.
+
+The source element in picture can only use srcset attribute, not the src attribute.
+
+But you can use just a single URL in srcset. No descriptor is the same as 1x.
+
+When the user resizes the window or rotates the device, the browser re-evaluates the img element.
+---
+class: light
+
+## Save bytes with other image formats
+
+<img src="wikipedia-photo.svg" alt="" class="big">
+
+Source: flif.info
+???
+
+Let's talk about image formats.
+
+Some formats compress some kinds of images better than others...
+
+But the point of this slide is to point out that new image formats are being developed.
+
+---
+class: light
+
+<img src="flif.png" alt="FLIF" class="big">
+
+???
+
+FLIF is a cool new format that is not yet supported in any browser.
+
+When it is supported it might make some of the HTML markup unnecessary...
+
+---
+class: light
+
+## Image format support
+
+<table>
+ <tr><th>Format<th>IE<th>Edge<th>Firefox<th>Chrome<th>Safari<th>Opera<th>iOS Safari<th>Opera Mini<th>Android Browser<th>Chrome for Android
+ <tr><td>WebP<td class=no>11<td class=no>14<td class=no>49<td class=yes>53<td class=no>10<td class=yes>39<td class=no>10<td class=yes>all<td class=yes>52<td class=yes>51
+ <tr><td>JPEG XR<td class=yes>11<td class=yes>14<td class=no>49<td class=no>53<td class=no>10<td class=no>39<td class=no>10<td class=no>all<td class=no>52<td class=no>51
+ <tr><td>JPEG 2000<td class=no>11<td class=no>14<td class=no>49<td class=no>53<td class=yes>10<td class=no>39<td class=yes>10<td class=no>all<td class=no>52<td class=no>51
+</table>
+
+Source: caniuse.com
+
+???
+
+But some browsers do support more formats than just JPEG/PNG/GIF today.
+
+Unfortunately none of them are supported everywhere.
+
+It could make sense to provide WebP for Chrome and Opera, JPEG XR for IE and Edge, and JPEG as fallback.
+---
+
+## picture &amp; source type
+
+```html
+<picture>
+ <source srcset="foo.webp"
+         type="image/webp">
+ <source srcset="foo.jxr"
+         type="image/vnd.ms-photo">
+ <img src="foo.jpg" alt="..."
+      width="100" height="150">
+</picture>
+```
+???
+
+To do that we use the type attribute on the source element.
+
+The browser goes over the list of source elements in order and checks the type attribute.
+
+If the MIME type is not supported, it skips to the next source or img element.
+
+If both source elements are skipped, the img element is used, and there we give the JPEG version.
+
+So now you can use new image formats on the Web without waiting for universal browser support.
+---
+## Everything together
+<div class=small-text>
+```html
+<picture>
+	<source
+		media="(min-width: 1280px)"
+		sizes="50vw"
+		srcset="opera-fullshot-200.webp 200w,
+				opera-fullshot-400.webp 400w,
+				opera-fullshot-800.webp 800w,
+				opera-fullshot-1200.webp 1200w,
+				opera-fullshot-1600.webp 1600w,
+				opera-fullshot-2000.webp 2000w"
+		type="image/webp">
+	<source
+		sizes="(min-width: 640px) 60vw, 100vw"
+		srcset="opera-closeup-200.webp 200w,
+				opera-closeup-400.webp 400w,
+				opera-closeup-800.webp 800w,
+				opera-closeup-1200.webp 1200w,
+				opera-closeup-1600.webp 1600w,
+				opera-closeup-2000.webp 2000w"
+		type="image/webp">
+	<source
+		media="(min-width: 1280px)"
+		sizes="50vw"
+		srcset="opera-fullshot-200.jpg 200w,
+				opera-fullshot-400.jpg 400w,
+				opera-fullshot-800.jpg 800w,
+				opera-fullshot-1200.jpg 1200w,
+				opera-fullshot-1600.jpg 1800w,
+				opera-fullshot-2000.jpg 2000w">
+	<img
+		src="opera-closeup-400.jpg"
+		alt="The Oslo Opera House"
+		sizes="(min-width: 640px) 60vw, 100vw"
+		srcset="opera-closeup-200.jpg 200w,
+				opera-closeup-400.jpg 400w,
+				opera-closeup-800.jpg 800w,
+				opera-closeup-1200.jpg 1200w,
+				opera-closeup-1600.jpg 1600w,
+				opera-closeup-2000.jpg 2000w">
+</picture>
+```
+</div>
+Source: https://dev.opera.com/articles/responsive-images/
+???
+You can combine all of these use cases in a single picture element.
+
+Unfortunately it means a bit of repetition and it looks ugly.
+
+It's still a saving, byte-wise, because image data is the big slice, and HTML is the small slice.
+
+You can't combine x descriptor with w descriptor in srcset, however.
+
+w descriptor is normalized into an x descriptor. The browser takes screen pixel density into account in both cases.
+---
+class: light
+
+## Support for the `<picture>` element
+
+<table>
+ <tr><th>IE<th>Edge<th>Firefox<th>Chrome<th>Safari<th>Opera<th>iOS Safari<th>Opera Mini<th>Android Browser<th>Chrome for Android
+ <tr><td class=no>11<td class=yes>14<td class=yes>49<td class=yes>53<td class=yes>10<td class=yes>39<td class=yes>10<td class=no>all<td class=yes>52<td class=yes>51
+</table>
+
+Source: caniuse.com
+???
+So what is the support like?
+
+Today it's pretty good; implemented across all major rendering engines.
+---
+
+## What about IE 11 and Opera Mini?
+
+* `<img src>` is used for fallback
+* or picturefill can be used
+
+???
+So what if you care about IE users or Opera Mini users?
+
+The img element is required, so you always have a fallback image for browsers that don't support picture.
+
+There's also a good polyfill called picturefill that can be used.
+
+---
+class: light
+
+<img src="opera-mini-logo-large.png" alt="Opera Mini" class="big">
+
+???
+
+Let's have a look at how Opera Mini works.
+
+---
+class: light
+
+<img src="mini-works2.gif" alt="" class="full">
+
+???
+
+Opera Mini is a proxy browser.
+
+A browser is running in Opera's proxy server. The proxy server requests your web page.
+
+It will then send a compressed version to the client.
+
+Why should you care about Opera Mini? How many are using it, and why?
+---
+<img src="StatCounter-browser-SE-monthly-201509-201609-bar.png" alt="Opera: 0.36% in Sweden" class="full">
+???
+
+In Sweden it's relatively few people mobile/tablet users are using Opera Mini.
+
+We have high-end phones and good Internet, so things work OK.
+---
+<img src="StatCounter-browser-IN-monthly-201509-201609-bar.png" alt="Opera: 17.68% in India" class="full">
+???
+
+In India, Opera is the second biggest mobile/tablet browser.
+---
+<img src="StatCounter-browser-BD-monthly-201509-201609-bar.png" alt="Opera: 47.49% in Bangladesh" class="full">
+
+???
+In Bangladesh, Opera is the biggest mobile/tablet browser, about 50% of the market share.
+
+Internet is slow and expensive, so Opera Mini makes the Web work affordable and at all for these users.
+
+Globally Opera Mini has over 300 million users.
+---
+## Design for Opera Mini
+
+ * https://dev.opera.com/articles/making-sites-work-opera-mini/
+ * Send HTML, don't rely on scripts
+ * Use SVG instead of icon fonts
+ * Gradients, rounded corners are disabled
+
+???
+
+There's a tutorial on dev.opera.com on how to make your page work in Opera Mini.
+
+Making your site work in Opera Mini doesn't just have the benefit that your site works for Opera Mini users.
+
+It can also make it perform better for everyone, make it more robust, more accessible, etc.
+
+---
+class: light
+
+## Test in Opera Mini
+
+ * iOS: O -> Opera Mini
+ * Android: O -> Savings mode: Extreme
+ * Opera Mini on desktop
+
+???
+
+To test Opera Mini, on iOS it is enabled in the "O" menu.
+
+On Android you flip on Savings mode in the "O" menu.
+
+There's also an Opera Mini application for desktop computers, for testing.
+
+---
+
+<img src="savings-with-opera-mini-high-mode1.jpg" alt="" class="full">
+
+???
+
+On Android there are two savings modes, high and extreme.
+---
+
+## Opera's "High" data saving mode
+ * Chromium on client
+ * HTTP2 connection to Opera proxy
+ * Images are compressed/transcoded
+ * Usually doesn't break things
+
+---
+
+## Opera's "Extreme" data saving mode
+
+ * Presto on proxy server
+ * OBML sent to client
+ * Scripts run on the server ~30s
+ * Web fonts, gradients, rounded corners disabled
+
+---
+
+<img src="Screen-Shot-2016-06-15-at-16.46.01.png" alt="Data savings, block ads, video compression, image and multimedia quality" class="big">
+
+---
+
+![](opera-max-icon-large.png)
+
+## Opera Max on Android
+
+Compress videos and images for almost all apps
+
+---
+
+# Thanks!
+
+@zcorpan
+
+simonp@opera.com
+
+zcorpan.github.io/webperf2016
+
+    </noscript>
+
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+    <script>
+      var slideshow = remark.create({highlightStyle: 'railscasts'});
+    </script>
+  </body>
+</html>
